@@ -7,7 +7,7 @@ wheels/
 *.egg-info
 
 # Environment variables
-API_Key.env
+.env
 
 # Virtual environments
 .venv
