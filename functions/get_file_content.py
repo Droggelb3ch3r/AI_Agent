@@ -1,6 +1,26 @@
 import os
+from google.genai import types
 
 from config import MAX_CHARS
+
+schema_get_file_content = types.FunctionDeclaration(
+    name="get_file_content",
+    description="Retrieves the content of a specified file relative to the working directory, up to a maximum number of characters",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="Path to the file to retrieve content from, relative to the working directory",
+            ),
+        },
+        required=[
+            "file_path"
+        ],
+    ),
+)
+
+
 
 def get_file_content(working_directory: str, file_path: str) -> str:
     try:
