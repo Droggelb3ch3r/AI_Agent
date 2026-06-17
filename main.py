@@ -21,7 +21,6 @@ args = parser.parse_args()
 messages: list[types.Content] = [
     types.Content(role="user", parts=[types.Part(text=args.user_prompt)])
 ]
-
 def generate_content(client, messages) -> types.GenerateContentResponse:
     response = client.models.generate_content(
         model="gemini-2.5-flash",
@@ -31,29 +30,43 @@ def generate_content(client, messages) -> types.GenerateContentResponse:
         )
     )
     return response
+
 client = genai.Client(api_key=api_key)
-response = generate_content(client, messages)
+for i in range(20):
+    response = generate_content(client, messages)
+    if response.candidates:
+        for candidate in response.candidates:
+            if candidate.content is not None:
+                messages.append(candidate.content)
+                
 
-if response.usage_metadata is None:
-    raise RuntimeError("Usage metadata is missing from the response.")
+    if response.usage_metadata is None:
+        raise RuntimeError("Usage metadata is missing from the response.")
 
-if args.verbose:
-    print(f"User prompt: {args.user_prompt}",)
-    print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}",)
-    print(f"Response tokens: {response.usage_metadata.candidates_token_count}",)
+    if args.verbose:
+        print(f"User prompt: {args.user_prompt}",)
+        print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}",)
+        print(f"Response tokens: {response.usage_metadata.candidates_token_count}",)
 
-if not response.function_calls:
-    print(f"Response:\n{response.text}",)
-else:
-    function_results = []
-    for function_call in response.function_calls:
-        function_response = call_function(function_call, args.verbose)
-        if not function_response.parts:
-            raise Exception("Error: No parts in function call result.")
-        if function_response.parts[0].function_response is None:
-            raise Exception("Error: No response in function call result.")
-        if function_response.parts[0].function_response.response is None:
-            raise Exception("Error: No response in function call result.")
-        function_results.append(function_response.parts[0])
-        if args.verbose:
-            print(f"-> {function_results[-1].function_response.response}")
+    if not response.function_calls:
+        print("Final response:",)
+        print(response.text)
+        break
+    else:
+        function_results = []
+        for function_call in response.function_calls:
+            function_response = call_function(function_call, args.verbose)
+            if not function_response.parts:
+                raise Exception("Error: No parts in function call result.")
+            if function_response.parts[0].function_response is None:
+                raise Exception("Error: No response in function call result.")
+            if function_response.parts[0].function_response.response is None:
+                raise Exception("Error: No response in function call result.")
+            function_results.append(function_response.parts[0])
+            if args.verbose:
+                print(f"-> {function_results[-1].function_response.response}")
+        messages.append(types.Content(role="user", parts=function_results))
+        
+    if i == 19:
+        print("Reached maximum number of iterations without a final response.")
+        exit(1)
